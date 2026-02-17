@@ -10,6 +10,11 @@ const sequelize = new Sequelize(
     port: process.env.DB_PORT,
     dialect: 'mysql',
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    dialectOptions: {
+      ssl: process.env.DB_SSL === 'true' || process.env.NODE_ENV === 'production' ? {
+        rejectUnauthorized: false
+      } : false
+    },
     pool: {
       max: 5,
       min: 0,
@@ -23,7 +28,7 @@ const connectDB = async () => {
   try {
     // Test koneksi
     await sequelize.authenticate();
-    console.log(`MySQL Connected: ${process.env.DB_HOST}:${process.env.DB_PORT}`);
+    console.log(`MySQL Connected: ${process.env.DB_HOST}:${process.env.DB_PORT} `);
 
     // Sinkronisasi tabel (Gunakan alter: false jika ada error "Too many keys")
     await sequelize.sync({ alter: false });

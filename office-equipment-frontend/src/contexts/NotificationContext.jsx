@@ -34,19 +34,18 @@ export const NotificationProvider = ({ children }) => {
   }, [isAuthenticated, user?._id]);
 
   const connectWebSocket = () => {
-    // WebSocket/Socket.IO disabled - using polling instead
-    return;
-    // const token = localStorage.getItem('token');
-    // const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:5000';
-    // 
-    // const newSocket = io(wsUrl, {
-    //   query: { token },
-    //   transports: ['websocket', 'polling'],
-    // });
-    // 
-    // newSocket.on('connect', () => {
-    //   console.log('WebSocket connected');
-    // });
+    const token = localStorage.getItem('token');
+    const isProduction = import.meta.env.MODE === 'production';
+    const wsUrl = isProduction ? window.location.origin : (import.meta.env.VITE_WS_URL || 'ws://localhost:5000');
+
+    const newSocket = io(wsUrl, {
+      query: { token },
+      transports: ['websocket', 'polling'],
+    });
+
+    newSocket.on('connect', () => {
+      console.log('WebSocket connected');
+    });
 
     newSocket.on('notification', (data) => {
       console.log('New notification:', data);

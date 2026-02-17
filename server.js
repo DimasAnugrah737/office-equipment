@@ -36,13 +36,37 @@ const setupAssociations = require('./src/models/associations');
 const http = require('http');
 const { initSocket } = require('./src/utils/socket');
 
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
+
 const app = express();
 const server = http.createServer(app);
+
+// Security Middleware
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP to avoid issues with serving the React app unless configured specifically
+}));
+
+// Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api', limiter);
+
+// Performance Middleware
+app.use(compression());
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+const path = require('path');
 
 // Activity logging middleware
 app.use(logActivity);
@@ -50,6 +74,16 @@ app.use(logActivity);
 // Routes
 app.use('/api', routes);
 app.use('/uploads', express.static('uploads'));
+
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, 'office-equipment-frontend/dist')));
+
+// The "catchall" handler: for any request that doesn't
+// match one above (and isn't an API or upload request), 
+// send back React's index.html file.
+app.get(/^(?!\/(api|uploads)).*/, (req, res) => {
+  res.sendFile(path.join(__dirname, 'office-equipment-frontend/dist/index.html'));
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -63,11 +97,6 @@ app.use((err, req, res, next) => {
     message: 'Something went wrong!',
     error: process.env.NODE_ENV === 'development' ? err.message : {}
   });
-});
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' });
 });
 
 const PORT = process.env.PORT || 5000;
